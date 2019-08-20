@@ -5,7 +5,7 @@
 extern void debug(const char *fmt, ...);
 extern void *sbrk(intptr_t increment);
 
-typedef struct fastBin{
+typedef struct fastbin{
     void* next;
 }fastBin;
 
@@ -14,7 +14,7 @@ typedef struct binHeader{
     void *next;
 }binHeader;
 
-typedef struct sortBinHeader{
+typedef struct sortbinHeader{
     uint32_t size;
     void *next;
     void *prev;
@@ -32,21 +32,84 @@ void *unsortbin_root, *unsortbin_tail;
 void *sortbin_head, *sortbin_tail, *sortbin_index;
 unsigned int sortbin_count, sortbin_indexsize;
 
-void *myalloc(size_t size)
+void sortSortbin() {
+    ;
+}
+void unsortSortbin() {
+    ;
+}
+
+void pushFastbin(void *ptr) {
+    ;
+}
+void *popFastbin() {
+    ;
+}
+
+void pushSmallbin(void *ptr, uint32_t size) {
+    ;
+}
+void *popSmallbin(uint32_t size) {
+    ;
+}
+
+void pushUnsortbin(void *ptr, uint32_t size) {
+    ;
+}
+void *popUnsortbin(uint32_t size) {
+    ;
+}
+
+void pushSortbin(void *ptr, uint32_t size) {
+    ;
+}
+void *pushSortbin(void size) {
+    ;
+}
+
+void pushNode(void *ptr, uint32_t size) {
+    if (size == 8) { //fastbin
+        ;
+    }
+    else if (size < 32) { //smallbin
+        ;
+    }
+    else { //unsortbin or sortbin
+        ;
+    }
+}
+
+void popNode(uint32_t size) {
+    if (size == 8) { //fastbin
+        ;
+    }
+    else if (size < 32) { //smallbin
+        ;
+    }
+    else { //unsortbin or sortbin
+        ;
+    }
+}
+
+void *myalloc(uint32_t size)
 {
-    void *p = sbrk(size);
+    size = ((size + 11) >> 3) << 3;
+    void *p = popNode();
+    if (p == NULL)
+        p = sbrk(size);
     debug("alloc(%u): %p\n", (unsigned int)size, p);
     max_size += size;
     debug("max: %u\n", max_size);
     return p;
 }
 
-void *myrealloc(void *ptr, size_t size)
+void *myrealloc(void *ptr, uint32_t size)
 {
+    size = ((size +7) >> 3) << 3;
     void *p = NULL;
     if (size != 0)
     {
-        p = sbrk(size);
+        p = myalloc(size);
         if (ptr)
             memcpy(p, ptr, size);
         max_size += size;
@@ -59,4 +122,5 @@ void *myrealloc(void *ptr, size_t size)
 void myfree(void *ptr)
 {
     debug("free(%p)\n", ptr);
+    pushNode(ptr, *(uint32_t*)(ptr - 4) & 0xFFFFFFF8);
 }
