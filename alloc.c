@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 extern void debug(const char *fmt, ...);
@@ -37,9 +37,9 @@ uint32_t fastbin_count = 0;
 unsigned int sortbin_count, sortbin_indexsize;
 #endif
 fastbin *fastbin_head, *fastbin_tail;
-binHeader smallbin_head, *smallbin_tail;
-binHeader unsortbin_root, *unsortbin_tail;
-sortbinHeader sortbin_head, *sortbin_tail, *sortbin_index;
+binHeader *smallbin_head, *smallbin_tail;
+binHeader *unsortbin_root, *unsortbin_tail;
+sortbinHeader *sortbin_head, *sortbin_tail, *sortbin_index;
 
 void indexSortbin() {
     ;
@@ -64,19 +64,19 @@ void pushFastbin(fastbin *ptr) {
 #endif
     }
     else {
-        debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
+        // debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
         ((fastbin *)fastbin_tail)->next = ptr;
-        debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
-        debug("[P] ptr(%p), ptr-next(%p)\n", ptr, &(ptr->next));
-        debug("[D] ptr(%lu), ptr-next(%lu)\n", *((uint64_t*)ptr), ptr->next);
+        // debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
+        // debug("[P] ptr(%p), ptr-next(%p)\n", ptr, &(ptr->next));
+        // debug("[D] ptr(%lu), ptr-next(%lu)\n", *((uint64_t*)ptr), ptr->next);
         ptr->next = (uint64_t)NULL;
-        debug("[P] NULL -> ptr(%p), ptr-next(%p)\n", ptr, &(ptr->next));
-        debug("[D] NULL -> ptr(%lu), ptr-next(%lu)\n", *((uint64_t*)ptr), ptr->next);
-        debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
+        // debug("[P] NULL -> ptr(%p), ptr-next(%p)\n", ptr, &(ptr->next));
+        // debug("[D] NULL -> ptr(%lu), ptr-next(%lu)\n", *((uint64_t*)ptr), ptr->next);
+        // debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
         fastbin *oldtail = fastbin_tail;
         fastbin_tail = ptr;
-        debug("[T] next(%p)\n", ((fastbin*)oldtail)->next);
-        debug("[=] pushFastbin : oldtail(%p {next(%p)}) -> tail(%p)\n\n", oldtail, oldtail->next, fastbin_tail);
+        // debug("[T] next(%p)\n", ((fastbin*)oldtail)->next);
+        // debug("[=] pushFastbin : oldtail(%p {next(%p)}) -> tail(%p)\n\n", oldtail, oldtail->next, fastbin_tail);
     }
 }
 void *popFastbin() {
@@ -87,40 +87,36 @@ void *popFastbin() {
     if (fastbin_head == NULL)
         return NULL;
     void *p = fastbin_head;
-    debug("0\n");
-    debug("[T] p = %p\n", p);
-    debug("[T] head = %p\n", &(fastbin_head->next));
-    debug("[T] next = %p\n", ((fastbin *)fastbin_head)->next);
-    debug("1\n");
+    // debug("[T] p = %p\n", p);
+    // debug("[T] head = %p\n", &(fastbin_head->next));
+    // debug("[T] next = %p\n", ((fastbin *)fastbin_head)->next);
     fastbin_head = ((fastbin *)fastbin_head)->next;
-    debug("2\n");
 #ifdef DEBUG
     debug("[=] popFastbin : oldhead(%p {next(%p)}) -> tail(%p)\n\n", oldhead, oldhead->next, fastbin_head);
     fastbin_count--;
-    debug("3\n");
 #endif
     return p;
 }
 
 void pushSmallbin(void *ptr, uint32_t size) {
-    ;
+    return;
 }
 void *popSmallbin(uint32_t size) {
-    ;
+    return NULL;
 }
 
 void pushUnsortbin(void *ptr, uint32_t size) {
-    ;
+    return;
 }
 void *popUnsortbin(uint32_t size) {
-    ;
+    return NULL;
 }
 
 void pushSortbin(void *ptr, uint32_t size) {
-    ;
+    return;
 }
 void *popSortbin(uint32_t size) {
-    ;
+    return NULL;
 }
 
 void pushNode(void *ptr, uint32_t size) {
@@ -159,9 +155,14 @@ void *myalloc(uint32_t size)
 
     void *p = popNode(size);
     if (p != NULL) {
-        ;
+#ifdef DEBUG       
+        debug("%u size recycle (ptr = %p)\n", size, p);
+#endif
     }
     else {
+#ifdef DEBUG
+        debug("%u size new alloc\n", size);
+#endif
         p = sbrk(size);
     }
     (*(uint32_t *)p) = size;
@@ -190,7 +191,6 @@ void myfree(void *ptr)
 
 void *myrealloc(void *ptr, uint32_t size)
 {
-    // printf("[myrealloc] ");
 #ifdef DEBUG
     debug("[+] myrealloc : %d\n", size);
 #endif
