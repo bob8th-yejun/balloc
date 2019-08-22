@@ -19,12 +19,12 @@ typedef struct binHeader{
     uint64_t next;
 }binHeader;
 
-typedef struct sortbinHeader{
+typedef struct sortedbinHeader{
     uint32_t size;
     uint64_t next;
     uint64_t prev;
     uint64_t index;
-}sortbinHeader;
+}sortedbinHeader;
 
 typedef struct binFooter{
     uint32_t size;
@@ -33,22 +33,32 @@ typedef struct binFooter{
 
 #ifdef DEBUG
 uint32_t max_size;
-uint32_t fastbin_count = 0;
-unsigned int sortbin_count, sortbin_indexsize;
+uint32_t fastbin_count = 0, smallbin_count;
+unsigned int sortedbin_count, sortedbin_indexsize;
 #endif
 fastbin *fastbin_head, *fastbin_tail;
 binHeader *smallbin_head, *smallbin_tail;
-binHeader *unsortbin_root, *unsortbin_tail;
-sortbinHeader *sortbin_head, *sortbin_tail, *sortbin_index;
+binHeader *unsortedbin_root, *unsortedbin_tail;
+sortedbinHeader *sortedbin_head, *sortedbin_tail, *sortedbin_index;
 
-void indexSortbin() {
-    ;
+binHeader *popBinNextNode(binHeader* now) {
+    binHeader *next = now->next;
+    now->next = next->next;
+    return next;
 }
-void mvindexSortbin() {
-    ;
+
+sortedbinHeader *popSortedbinNode(sortedbinHeader* now) {
+    return NULL;
 }
-void unindexSortbin() {
-    ;
+
+void indexSortedbin() {
+    return;
+}
+void mvindexSortedbin() {
+    return;
+}
+void unindexSortedbin() {
+    return;
 }
 
 void pushFastbin(fastbin *ptr) {
@@ -64,19 +74,13 @@ void pushFastbin(fastbin *ptr) {
 #endif
     }
     else {
-        // debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
         ((fastbin *)fastbin_tail)->next = ptr;
-        // debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
-        // debug("[P] ptr(%p), ptr-next(%p)\n", ptr, &(ptr->next));
-        // debug("[D] ptr(%lu), ptr-next(%lu)\n", *((uint64_t*)ptr), ptr->next);
         ptr->next = (uint64_t)NULL;
-        // debug("[P] NULL -> ptr(%p), ptr-next(%p)\n", ptr, &(ptr->next));
-        // debug("[D] NULL -> ptr(%lu), ptr-next(%lu)\n", *((uint64_t*)ptr), ptr->next);
-        // debug("[T] next(%p)\n", ((fastbin*)fastbin_tail)->next);
         fastbin *oldtail = fastbin_tail;
         fastbin_tail = ptr;
-        // debug("[T] next(%p)\n", ((fastbin*)oldtail)->next);
-        // debug("[=] pushFastbin : oldtail(%p {next(%p)}) -> tail(%p)\n\n", oldtail, oldtail->next, fastbin_tail);
+#ifdef DEBUG
+        debug("[=] pushFastbin : oldtail(%p {next(%p)}) -> tail(%p)\n\n", oldtail, oldtail->next, fastbin_tail);
+#endif
     }
 }
 void *popFastbin() {
@@ -87,9 +91,6 @@ void *popFastbin() {
     if (fastbin_head == NULL)
         return NULL;
     void *p = fastbin_head;
-    // debug("[T] p = %p\n", p);
-    // debug("[T] head = %p\n", &(fastbin_head->next));
-    // debug("[T] next = %p\n", ((fastbin *)fastbin_head)->next);
     fastbin_head = ((fastbin *)fastbin_head)->next;
 #ifdef DEBUG
     debug("[=] popFastbin : oldhead(%p {next(%p)}) -> tail(%p)\n\n", oldhead, oldhead->next, fastbin_head);
@@ -98,24 +99,69 @@ void *popFastbin() {
     return p;
 }
 
-void pushSmallbin(void *ptr, uint32_t size) {
-    return;
+void pushSmallbin(binHeader *ptr, uint32_t size) {
+#ifdef DEBUG
+    debug("[+] pushSmallbin : ptr(%p) size(%u)\n", ptr, size);
+    debug("[+] pushSmallbin : smallbin_count(%d)\n", ++smallbin_count);
+    binHeader *oldtail = smallbin_tail;
+#endif
+    if (smallbin_head == NULL) {
+        smallbin_head = smallbin_tail = ptr;
+        ptr->size = (uint32_t)size;
+        ptr->next = (uint64_t)NULL;
+        ((binFooter *)(((void*)ptr) + size - 4))->size = (uint32_t)size;
+#ifdef DEBUG
+        debug("node : size(%d), next(%p)", *((uint32_t *)ptr), (ptr + 4));
+        debug("[=] pushSmallbin : head(%p) & tail(%p) set\n\n", smallbin_head, smallbin_tail);
+#endif
+    }
+    else {
+        smallbin_tail->next = ptr;
+        ptr->size = (uint32_t)size;
+        ptr->next = (uint64_t)NULL;
+        ((binFooter *)(((void*)ptr) + size - 4))->size = (uint32_t)size;
+        smallbin_tail = ptr;
+#ifdef DEBUG
+        debug("node : size(%d), next(%p)", *((uint32_t *)ptr), (ptr + 4));
+        debug("[=] pushSmallbin : oldtail(%p {next(%p)}) -> tail(%p)\n\n", oldtail, oldtail->next, fastbin_tail);
+#endif
+    }
 }
 void *popSmallbin(uint32_t size) {
+#ifdef DEBUG
+    debug("[+] popSmallbin : smallbin_count(%d)\n", smallbin_count);
+    binHeader *oldhead = smallbin_head;
+#endif
+    if (smallbin_head == NULL)
+        return NULL;
+    binHeader *p = smallbin_head;
+    // while(p != NULL) {
+    //     if(p->size == size) {
+    //         break;
+    //     }
+    //     p = (binHeader *)(p->next);
+    // }
+    // popBinNextNode(now);
+    smallbin_head = ((binHeader *)smallbin_head)->next;
+    #ifdef DEBUG
+    debug("[=] popSmallbin : oldhead(%p {next(%p)}) -> tail(%p)\n\n", oldhead, oldhead->next, fastbin_head);
+    smallbin_count--;
+#endif
+    return NULL;
+    return p;
+}
+
+void pushUnsortedbin(void *ptr, uint32_t size) {
+    return;
+}
+void *popUnsortedbin(uint32_t size) {
     return NULL;
 }
 
-void pushUnsortbin(void *ptr, uint32_t size) {
+void pushSortedbin(void *ptr, uint32_t size) {
     return;
 }
-void *popUnsortbin(uint32_t size) {
-    return NULL;
-}
-
-void pushSortbin(void *ptr, uint32_t size) {
-    return;
-}
-void *popSortbin(uint32_t size) {
+void *popSortedbin(uint32_t size) {
     return NULL;
 }
 
@@ -125,8 +171,8 @@ void pushNode(void *ptr, uint32_t size) {
     else if (size < 32)
         pushSmallbin(ptr, size);
     else
-        //pushSortbin(ptr, size);
-        pushUnsortbin(ptr, size);
+        //pushSortedbin(ptr, size);
+        pushUnsortedbin(ptr, size);
 }
 
 void* popNode(uint32_t size) {
@@ -138,8 +184,8 @@ void* popNode(uint32_t size) {
         p = popSmallbin(size);
     }
     else {
-        // p = popSortbin(size);
-        p = popUnsortbin(size);
+        // p = popSortedbin(size);
+        p = popUnsortedbin(size);
     }
     return p;
 }
