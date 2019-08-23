@@ -41,11 +41,16 @@ binHeader *smallbin_head, *smallbin_tail;
 binHeader *unsortedbin_root, *unsortedbin_tail;
 sortedbinHeader *sortedbin_head, *sortedbin_tail, *sortedbin_index;
 
-binHeader *popBinNextNode(binHeader* now) {
-    binHeader *next = now->next;
-    now->next = next->next;
-    return next;
-}
+// binHeader *popBinNextNode(binHeader* now) {
+// #ifdef DEBUG
+//     debug("[+] popBinNextNode : node(%p), next node(%p), next->next(%p)\n", now, now->next, ((binHeader *)(now->next))->next);
+// #endif
+//     binHeader *next = now->next;
+//     now->next = next->next;
+//     return next;
+// #ifdef DEBUG
+// #endif
+// }
 
 sortedbinHeader *popSortedbinNode(sortedbinHeader* now) {
     return NULL;
@@ -111,7 +116,7 @@ void pushSmallbin(binHeader *ptr, uint32_t size) {
         ptr->next = (uint64_t)NULL;
         ((binFooter *)(((void*)ptr) + size - 4))->size = (uint32_t)size;
 #ifdef DEBUG
-        debug("node : size(%d), next(%p)", *((uint32_t *)ptr), (ptr + 4));
+        debug("node : size(%d), next(%p)\n", *((uint32_t *)ptr), (ptr + 4));
         debug("[=] pushSmallbin : head(%p) & tail(%p) set\n\n", smallbin_head, smallbin_tail);
 #endif
     }
@@ -122,32 +127,46 @@ void pushSmallbin(binHeader *ptr, uint32_t size) {
         ((binFooter *)(((void*)ptr) + size - 4))->size = (uint32_t)size;
         smallbin_tail = ptr;
 #ifdef DEBUG
-        debug("node : size(%d), next(%p)", *((uint32_t *)ptr), (ptr + 4));
+        debug("node : size(%d), next(%p)\n", *((uint32_t *)ptr), (ptr + 4));
         debug("[=] pushSmallbin : oldtail(%p {next(%p)}) -> tail(%p)\n\n", oldtail, oldtail->next, fastbin_tail);
 #endif
     }
 }
 void *popSmallbin(uint32_t size) {
 #ifdef DEBUG
-    debug("[+] popSmallbin : smallbin_count(%d)\n", smallbin_count);
+    debug("[+] popSmallbin : size(%u), smallbin_count(%d)\n", size, smallbin_count);
     binHeader *oldhead = smallbin_head;
 #endif
     if (smallbin_head == NULL)
         return NULL;
-    binHeader *p = smallbin_head;
-    // while(p != NULL) {
-    //     if(p->size == size) {
-    //         break;
-    //     }
-    //     p = (binHeader *)(p->next);
-    // }
-    // popBinNextNode(now);
-    smallbin_head = ((binHeader *)smallbin_head)->next;
-    #ifdef DEBUG
-    debug("[=] popSmallbin : oldhead(%p {next(%p)}) -> tail(%p)\n\n", oldhead, oldhead->next, fastbin_head);
-    smallbin_count--;
+    binHeader *p = smallbin_head, *prev;
+    while(p != NULL) {
+        // debug("[TW] pop-while : p(%p), p->size(%u), p->next(%p)\n", p, p->size, p->next);
+        if(p->size == size) {
+            break;
+        }
+        prev = p;
+        p = (binHeader *)(p->next);
+    }
+    // debug("[TW] while-end : p(%p) head(%p)\n", p, smallbin_head);
+    if (smallbin_head == p) {
+        smallbin_head = (binHeader *)(smallbin_head->next);
+    }
+    else if(p != NULL) {
+        // debug("[TW] call PopBinNextNode : p(%p)\n", p);
+        if (p->next != NULL)
+            prev->next = p->next;
+        else {
+            smallbin_tail = prev;
+            prev->next = NULL;
+        }
+    }
+    // debug("[TW] function-end : p(%p)\n", p);
+#ifdef DEBUG
+    if (p != NULL)
+        smallbin_count--;
+    debug("[=] popSmallbin\n\n");
 #endif
-    return NULL;
     return p;
 }
 
@@ -207,7 +226,7 @@ void *myalloc(uint32_t size)
     }
     else {
 #ifdef DEBUG
-        debug("%u size new alloc\n", size);
+        debug("%u size new sbrk\n", size);
 #endif
         p = sbrk(size);
     }
